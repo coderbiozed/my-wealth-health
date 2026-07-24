@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Wealth Health — Biozed Hossain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <p class="brand-kicker">My Wealth Health</p>
+        <h1 class="brand-name">Biozed Hossain</h1>
+        <p class="brand-sub">Personal Finance Manager</p>
+      </div>
+      <nav class="nav" id="nav">
+        <button type="button" data-view="dashboard" class="nav-btn active">Dashboard</button>
+        <button type="button" data-view="income" class="nav-btn">Income</button>
+        <button type="button" data-view="expense" class="nav-btn">Expense Tracker</button>
+        <button type="button" data-view="budget" class="nav-btn">Monthly Budget</button>
+        <button type="button" data-view="installment" class="nav-btn">Installments</button>
+        <button type="button" data-view="debt" class="nav-btn">Debt Tracker</button>
+        <button type="button" data-view="savings" class="nav-btn">Savings</button>
+        <button type="button" data-view="reports" class="nav-btn">Reports</button>
+        <button type="button" data-view="settings" class="nav-btn">Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <p>Money is a tool.</p>
+        <p>Every Taka must have a purpose.</p>
+        <p class="muted">v1.0</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
+        <div class="topbar-left">
+          <h2 id="viewTitle">Dashboard</h2>
+          <p id="viewSubtitle" class="muted">Today's cash position</p>
+        </div>
+        <div class="topbar-right">
+          <label class="month-picker">
+            <span>Month</span>
+            <input type="month" id="activeMonth" />
+          </label>
+          <button type="button" class="btn ghost" id="btnSample">Sample data</button>
+          <button type="button" class="btn ghost" id="btnExport">Export</button>
+          <button type="button" class="btn ghost" id="btnImport">Import</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+        </div>
+      </header>
+
+      <div id="alerts" class="alerts" hidden></div>
+      <section id="viewRoot" class="view-root"></section>
+    </main>
+  </div>
+
+  <dialog id="formDialog" class="dialog">
+    <form id="entityForm" method="dialog">
+      <header class="dialog-head">
+        <h3 id="dialogTitle">Add</h3>
+        <button type="button" class="icon-btn" id="dialogClose" aria-label="Close">×</button>
+      </header>
+      <div id="dialogFields" class="dialog-body"></div>
+      <footer class="dialog-foot">
+        <button type="button" class="btn ghost" id="dialogCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="dialogSave">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Deploy the "my wealth health" folder as the site root
+[build]
+  publish = "."
+  command = "echo 'Static site — no build'"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+# SPA-style fallback (optional)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

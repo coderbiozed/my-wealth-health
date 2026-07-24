@@ -1,0 +1,13 @@
+# Paste Order (Apps Script)
+
+Create each file in this order, then run `setupFinanceManager`.
+
+1. Config.gs
+2. Code.gs
+3. Sheets.gs
+4. Dashboard.gs
+5. HealthScore.gs
+6. Charts.gs
+7. SampleData.gs
+
+Timezone: Asia/Dhaka (see appsscript.json)
