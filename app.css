@@ -190,6 +190,34 @@ body::before {
   flex-shrink: 0;
 }
 
+.sync-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  white-space: nowrap;
+}
+.sync-status.ok {
+  color: var(--income);
+  border-color: #b7ddcd;
+  background: #e7f5ef;
+}
+.sync-status.pending {
+  color: var(--warn);
+  border-color: #f0d2a0;
+  background: #fff4e0;
+}
+.sync-status.error {
+  color: var(--expense);
+  border-color: #f3c0bb;
+  background: #fde8e6;
+}
+.sync-status.muted {
+  color: var(--muted);
+}
+
 .month-picker {
   display: flex;
   align-items: center;

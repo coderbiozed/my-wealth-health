@@ -4,14 +4,14 @@ Fully dynamic personal finance system for **Biozed Hossain** — Google Sheets b
 
 ## HTML Frontend (easiest)
 
-Open `index.html` in your browser (double-click or Live Server).
+Open `index.html` or use https://my-wealth-health.netlify.app/
 
 - Dashboard, Income, Expense, Budget, Installments, Debt, Savings, Reports, Settings
 - Add / Edit / Delete with forms
 - Charts, health score, alerts — all live
 - Data saved in browser `localStorage`
+- **Google Sheet sync** — see [SYNC.md](SYNC.md)
 - Export / Import JSON backup
-- **Sample data** button to try it instantly
 
 ```bash
 # optional local server

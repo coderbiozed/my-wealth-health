@@ -12,8 +12,23 @@ function onOpen() {
     .addItem('📝 Add Sample Data', 'addSampleData')
     .addSeparator()
     .addItem('📅 Set Active Month to Current', 'setActiveMonthToCurrent')
+    .addItem('🌐 Show Sync Setup Help', 'showSyncHelp')
     .addItem('ℹ️ About', 'showAbout')
     .addToUi();
+}
+
+function showSyncHelp() {
+  SpreadsheetApp.getUi().alert(
+    'Netlify ↔ Sheet Sync',
+    '1. Deploy → New deployment → Web app\n' +
+      '2. Execute as: Me · Who has access: Anyone\n' +
+      '3. Copy the /exec URL\n' +
+      '4. Open https://my-wealth-health.netlify.app/ → Settings\n' +
+      '5. Paste URL (and optional token from Settings!B12)\n' +
+      '6. Test connection → Save to Sheet\n\n' +
+      'Website edits will write into this workbook.',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 /**

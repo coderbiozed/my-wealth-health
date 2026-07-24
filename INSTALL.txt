@@ -9,5 +9,10 @@ Create each file in this order, then run `setupFinanceManager`.
 5. HealthScore.gs
 6. Charts.gs
 7. SampleData.gs
+8. Api.gs   ← required for Netlify ↔ Sheet sync
 
 Timezone: Asia/Dhaka (see appsscript.json)
+
+After setup: Deploy → Web app → Anyone → paste URL in https://my-wealth-health.netlify.app/ Settings
+See SYNC.md
+

@@ -1,6 +1,6 @@
 /**
  * My Wealth Health — Biozed Hossain
- * Local HTML frontend with localStorage persistence
+ * Netlify frontend + localStorage + optional Google Sheets sync
  */
 
 const STORAGE_KEY = 'myWealthHealth_v1';
@@ -74,7 +74,10 @@ function defaultState() {
       monthlyIncome: 30000,
       fixedCosts: 0,
       emergencyBalance: 1000,
-      budgetAlertPct: 20
+      budgetAlertPct: 20,
+      sheetApiUrl: '',
+      syncToken: '',
+      syncEnabled: true
     },
     budgets: { ...DEFAULT_BUDGETS },
     income: [],
@@ -89,14 +92,167 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState();
-    return { ...defaultState(), ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    const base = defaultState();
+    return {
+      ...base,
+      ...parsed,
+      settings: { ...base.settings, ...(parsed.settings || {}) },
+      budgets: { ...base.budgets, ...(parsed.budgets || {}) }
+    };
   } catch {
     return defaultState();
   }
 }
 
-function saveState() {
+let syncTimer = null;
+let sheetPushInFlight = false;
+
+function saveState(opts = {}) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!opts.skipSheet) scheduleSheetPush();
+}
+
+function setSyncStatus(kind, detail) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const map = {
+    off: ['Sync off', 'muted'],
+    pending: ['Saving to Sheet…', 'pending'],
+    ok: ['Sheet synced', 'ok'],
+    error: ['Sheet sync failed', 'error'],
+    loading: ['Loading Sheet…', 'pending']
+  };
+  const [label, cls] = map[kind] || map.off;
+  el.textContent = detail || label;
+  el.className = 'sync-status ' + cls;
+}
+
+function scheduleSheetPush() {
+  const url = (state.settings.sheetApiUrl || '').trim();
+  if (!url || state.settings.syncEnabled === false) {
+    setSyncStatus(url ? 'off' : 'off');
+    return;
+  }
+  clearTimeout(syncTimer);
+  setSyncStatus('pending');
+  syncTimer = setTimeout(() => pushToSheet(), 900);
+}
+
+async function pushToSheet() {
+  const url = (state.settings.sheetApiUrl || '').trim();
+  if (!url || state.settings.syncEnabled === false || sheetPushInFlight) return;
+  sheetPushInFlight = true;
+  setSyncStatus('pending');
+  try {
+    const payload = {
+      action: 'save',
+      token: state.settings.syncToken || '',
+      data: {
+        settings: {
+          year: state.settings.year,
+          month: state.settings.month,
+          owner: state.settings.owner,
+          monthlyIncome: state.settings.monthlyIncome,
+          fixedCosts: state.settings.fixedCosts,
+          emergencyBalance: state.settings.emergencyBalance,
+          budgetAlertPct: state.settings.budgetAlertPct
+        },
+        budgets: state.budgets,
+        income: state.income,
+        expenses: state.expenses,
+        installments: state.installments,
+        debts: state.debts,
+        savings: state.savings
+      }
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      // text/plain avoids CORS preflight with Apps Script
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { throw new Error('Bad response from Sheet API'); }
+    if (!json.ok) throw new Error(json.error || 'Save failed');
+    setSyncStatus('ok', 'Saved to Sheet');
+    toast('Synced to Google Sheet');
+  } catch (err) {
+    console.error(err);
+    setSyncStatus('error', 'Sync failed');
+    toast('Sheet sync failed — data kept locally');
+  } finally {
+    sheetPushInFlight = false;
+  }
+}
+
+async function pullFromSheet() {
+  const url = (state.settings.sheetApiUrl || '').trim();
+  if (!url) {
+    toast('Add Sheet API URL in Settings first');
+    return false;
+  }
+  setSyncStatus('loading');
+  try {
+    const token = encodeURIComponent(state.settings.syncToken || '');
+    const sep = url.includes('?') ? '&' : '?';
+    const res = await fetch(`${url}${sep}action=load&token=${token}`, { redirect: 'follow' });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { throw new Error('Bad response from Sheet API'); }
+    if (!json.ok || !json.data) throw new Error(json.error || 'Load failed');
+
+    const keepUrl = state.settings.sheetApiUrl;
+    const keepToken = state.settings.syncToken;
+    const keepSync = state.settings.syncEnabled;
+    const base = defaultState();
+    state = {
+      ...base,
+      ...json.data,
+      settings: {
+        ...base.settings,
+        ...(json.data.settings || {}),
+        sheetApiUrl: keepUrl,
+        syncToken: keepToken,
+        syncEnabled: keepSync
+      },
+      budgets: { ...base.budgets, ...(json.data.budgets || {}) }
+    };
+    saveState({ skipSheet: true });
+    setSyncStatus('ok', 'Loaded from Sheet');
+    toast('Loaded from Google Sheet');
+    render();
+    return true;
+  } catch (err) {
+    console.error(err);
+    setSyncStatus('error', 'Load failed');
+    toast('Could not load from Sheet');
+    return false;
+  }
+}
+
+async function testSheetConnection() {
+  const url = (state.settings.sheetApiUrl || '').trim();
+  if (!url) {
+    toast('Paste Web App URL first');
+    return;
+  }
+  setSyncStatus('loading', 'Testing…');
+  try {
+    const token = encodeURIComponent(state.settings.syncToken || '');
+    const sep = url.includes('?') ? '&' : '?';
+    const res = await fetch(`${url}${sep}action=ping&token=${token}`, { redirect: 'follow' });
+    const json = JSON.parse(await res.text());
+    if (!json.ok) throw new Error(json.error || 'Ping failed');
+    setSyncStatus('ok', 'Connected');
+    toast('Sheet API connected ✓');
+  } catch (err) {
+    console.error(err);
+    setSyncStatus('error', 'Not connected');
+    toast('Connection failed — check Web App deploy (Anyone)');
+  }
 }
 
 function money(n) {
@@ -727,18 +883,46 @@ function renderReports(s) {
 
 function renderSettings() {
   const st = state.settings;
-  return `<div class="panel" style="max-width:640px">
+  const checked = st.syncEnabled !== false ? 'checked' : '';
+  return `<div class="panel" style="max-width:720px">
     <div class="section-head"><h3>Preferences</h3></div>
     <form id="settingsForm" class="form-grid">
-      <div class="field"><label>Owner</label><input name="owner" value="${st.owner}" /></div>
+      <div class="field"><label>Owner</label><input name="owner" value="${escapeAttr(st.owner)}" /></div>
       <div class="field"><label>Monthly Income (BDT)</label><input name="monthlyIncome" type="number" min="0" value="${st.monthlyIncome}" /></div>
       <div class="field"><label>Fixed Monthly Costs</label><input name="fixedCosts" type="number" min="0" value="${st.fixedCosts}" /></div>
       <div class="field"><label>Emergency Balance Alert</label><input name="emergencyBalance" type="number" min="0" value="${st.emergencyBalance}" /></div>
       <div class="field"><label>Budget Alert Threshold %</label><input name="budgetAlertPct" type="number" min="1" max="100" value="${st.budgetAlertPct}" /></div>
-      <div class="field full"><button type="submit" class="btn primary">Save Settings</button></div>
+      <div class="field full"><hr style="border:0;border-top:1px solid var(--line);margin:0.2rem 0" /></div>
+      <div class="field full"><strong>Google Sheet sync</strong>
+        <p class="muted" style="margin:0.35rem 0 0;font-size:0.8rem">Deploy Apps Script as Web App, then paste the URL here. Edits on the website save into your Sheet.</p>
+      </div>
+      <div class="field full"><label>Sheet API URL (Web App)</label>
+        <input name="sheetApiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeAttr(st.sheetApiUrl || '')}" />
+      </div>
+      <div class="field"><label>Sync Token (optional)</label>
+        <input name="syncToken" type="text" placeholder="Same as Settings!B12 in Sheet" value="${escapeAttr(st.syncToken || '')}" />
+      </div>
+      <div class="field"><label>Auto sync</label>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;font-weight:500;color:var(--ink)">
+          <input name="syncEnabled" type="checkbox" ${checked} /> Push edits to Sheet
+        </label>
+      </div>
+      <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+        <button type="submit" class="btn primary">Save Settings</button>
+        <button type="button" class="btn ghost" id="btnTestSheet">Test connection</button>
+        <button type="button" class="btn ghost" id="btnPullSheet">Load from Sheet</button>
+        <button type="button" class="btn ghost" id="btnPushSheet">Save to Sheet now</button>
+      </div>
     </form>
-    <p class="muted" style="margin-top:1rem;font-size:0.85rem">Active month is controlled from the top bar. Data is saved in this browser (localStorage).</p>
+    <p class="muted" style="margin-top:1rem;font-size:0.85rem">Local backup always runs in this browser. Sheet sync needs the Web App deployed with access: <strong>Anyone</strong>.</p>
   </div>`;
+}
+
+function escapeAttr(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
 }
 
 /* ========== FORMS ========== */
@@ -906,10 +1090,17 @@ function bindViewEvents() {
     state.settings.fixedCosts = Number(fd.get('fixedCosts')) || 0;
     state.settings.emergencyBalance = Number(fd.get('emergencyBalance')) || 0;
     state.settings.budgetAlertPct = Number(fd.get('budgetAlertPct')) || 20;
+    state.settings.sheetApiUrl = String(fd.get('sheetApiUrl') || '').trim();
+    state.settings.syncToken = String(fd.get('syncToken') || '').trim();
+    state.settings.syncEnabled = !!fd.get('syncEnabled');
     saveState();
     toast('Settings saved');
     render();
   });
+
+  document.getElementById('btnTestSheet')?.addEventListener('click', () => testSheetConnection());
+  document.getElementById('btnPullSheet')?.addEventListener('click', () => pullFromSheet());
+  document.getElementById('btnPushSheet')?.addEventListener('click', () => pushToSheet());
 }
 
 /* ========== SAMPLE / EXPORT ========== */
@@ -1026,6 +1217,11 @@ function init() {
   document.getElementById('entityForm').addEventListener('submit', saveForm);
 
   render();
+  if ((state.settings.sheetApiUrl || '').trim()) {
+    pullFromSheet();
+  } else {
+    setSyncStatus('off');
+  }
 }
 
 init();
