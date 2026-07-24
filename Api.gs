@@ -161,23 +161,31 @@ function importState_(data) {
   }
 }
 
-/** Quiet setup for API (no UI alerts) */
 function ensureWorkbookForApi_(ss) {
   ensureAllSheets_(ss);
-  if (!ss.getSheetByName(SHEETS.SETTINGS) || !ss.getSheetByName(SHEETS.SETTINGS).getRange('A1').getValue()) {
-    buildCategoriesSheet_(ss);
-    buildSettingsSheet_(ss);
-    buildIncomeSheet_(ss);
-    buildExpenseSheet_(ss);
-    buildBudgetSheet_(ss);
-    buildInstallmentSheet_(ss);
-    buildDebtSheet_(ss);
-    buildSavingsSheet_(ss);
-    buildReportsSheet_(ss);
-    buildChartDataSheet_(ss);
-    buildDashboard_(ss);
-    applyAllConditionalFormatting_(ss);
+  var settings = ss.getSheetByName(SHEETS.SETTINGS);
+  var income = ss.getSheetByName(SHEETS.INCOME);
+  var hasStructure = settings && settings.getRange('A1').getValue() &&
+    income && income.getRange('A1').getValue();
+
+  // Existing workbook: only ensure sync rows — do NOT rebuild (keeps your data)
+  if (hasStructure) {
+    ensureSyncSettingsRows_(settings);
+    return;
   }
+
+  buildCategoriesSheet_(ss);
+  buildSettingsSheet_(ss);
+  buildIncomeSheet_(ss);
+  buildExpenseSheet_(ss);
+  buildBudgetSheet_(ss);
+  buildInstallmentSheet_(ss);
+  buildDebtSheet_(ss);
+  buildSavingsSheet_(ss);
+  buildReportsSheet_(ss);
+  buildChartDataSheet_(ss);
+  buildDashboard_(ss);
+  applyAllConditionalFormatting_(ss);
   ensureSyncSettingsRows_(ss.getSheetByName(SHEETS.SETTINGS));
 }
 

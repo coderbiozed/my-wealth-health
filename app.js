@@ -75,7 +75,7 @@ function defaultState() {
       fixedCosts: 0,
       emergencyBalance: 1000,
       budgetAlertPct: 20,
-      sheetApiUrl: '',
+      sheetApiUrl: 'https://script.google.com/macros/s/AKfycbz06wjzgiMi_3ol5aw--q629hR_hazXeWBPJnV6U_tyTpqHPQTZWikkP2dtNlzaxYs9/exec',
       syncToken: '',
       syncEnabled: true
     },
@@ -94,12 +94,18 @@ function loadState() {
     if (!raw) return defaultState();
     const parsed = JSON.parse(raw);
     const base = defaultState();
-    return {
+    const merged = {
       ...base,
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings || {}) },
       budgets: { ...base.budgets, ...(parsed.budgets || {}) }
     };
+    // Prefer configured default Web App if user has none yet
+    if (!(merged.settings.sheetApiUrl || '').trim() && base.settings.sheetApiUrl) {
+      merged.settings.sheetApiUrl = base.settings.sheetApiUrl;
+      merged.settings.syncEnabled = true;
+    }
+    return merged;
   } catch {
     return defaultState();
   }
@@ -884,37 +890,45 @@ function renderReports(s) {
 function renderSettings() {
   const st = state.settings;
   const checked = st.syncEnabled !== false ? 'checked' : '';
-  return `<div class="panel" style="max-width:720px">
-    <div class="section-head"><h3>Preferences</h3></div>
+  const hasApi = !!(st.sheetApiUrl || '').trim();
+  return `<div class="panel" style="max-width:760px">
+    <div class="section-head"><h3>Connect existing Google Sheet</h3></div>
+    <ol class="connect-steps">
+      <li>Open <strong>your existing</strong> Google Sheet (the Biozed Finance Manager workbook).</li>
+      <li>Extensions → Apps Script → paste latest <code>ALL_IN_ONE.gs</code> (must include <code>Api.gs</code>).</li>
+      <li>Save → Deploy → <strong>New deployment</strong> → Web app → Execute as <strong>Me</strong> → Who has access <strong>Anyone</strong> → Deploy.</li>
+      <li>Copy the URL ending in <code>/exec</code> and paste it below.</li>
+      <li>Click <strong>Test connection</strong>, then <strong>Load from Sheet</strong> to pull your existing data into the website.</li>
+    </ol>
     <form id="settingsForm" class="form-grid">
+      <div class="field full"><label>Sheet API URL (from your existing sheet’s Web App)</label>
+        <input name="sheetApiUrl" type="url" placeholder="https://script.google.com/macros/s/XXXX/exec" value="${escapeAttr(st.sheetApiUrl || '')}" />
+      </div>
+      <div class="field"><label>Sync Token (optional — Settings!B12)</label>
+        <input name="syncToken" type="text" placeholder="Leave blank if unused" value="${escapeAttr(st.syncToken || '')}" />
+      </div>
+      <div class="field"><label>Auto sync</label>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;font-weight:500;color:var(--ink)">
+          <input name="syncEnabled" type="checkbox" ${checked} /> Push website edits into that Sheet
+        </label>
+      </div>
+      <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+        <button type="submit" class="btn primary">Save connection</button>
+        <button type="button" class="btn ghost" id="btnTestSheet">Test connection</button>
+        <button type="button" class="btn primary" id="btnPullSheet">${hasApi ? 'Load from Sheet' : 'Load from Sheet'}</button>
+        <button type="button" class="btn ghost" id="btnPushSheet">Save website → Sheet</button>
+      </div>
+      <div class="field full"><hr style="border:0;border-top:1px solid var(--line);margin:0.4rem 0" /></div>
       <div class="field"><label>Owner</label><input name="owner" value="${escapeAttr(st.owner)}" /></div>
       <div class="field"><label>Monthly Income (BDT)</label><input name="monthlyIncome" type="number" min="0" value="${st.monthlyIncome}" /></div>
       <div class="field"><label>Fixed Monthly Costs</label><input name="fixedCosts" type="number" min="0" value="${st.fixedCosts}" /></div>
       <div class="field"><label>Emergency Balance Alert</label><input name="emergencyBalance" type="number" min="0" value="${st.emergencyBalance}" /></div>
       <div class="field"><label>Budget Alert Threshold %</label><input name="budgetAlertPct" type="number" min="1" max="100" value="${st.budgetAlertPct}" /></div>
-      <div class="field full"><hr style="border:0;border-top:1px solid var(--line);margin:0.2rem 0" /></div>
-      <div class="field full"><strong>Google Sheet sync</strong>
-        <p class="muted" style="margin:0.35rem 0 0;font-size:0.8rem">Deploy Apps Script as Web App, then paste the URL here. Edits on the website save into your Sheet.</p>
-      </div>
-      <div class="field full"><label>Sheet API URL (Web App)</label>
-        <input name="sheetApiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeAttr(st.sheetApiUrl || '')}" />
-      </div>
-      <div class="field"><label>Sync Token (optional)</label>
-        <input name="syncToken" type="text" placeholder="Same as Settings!B12 in Sheet" value="${escapeAttr(st.syncToken || '')}" />
-      </div>
-      <div class="field"><label>Auto sync</label>
-        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;font-weight:500;color:var(--ink)">
-          <input name="syncEnabled" type="checkbox" ${checked} /> Push edits to Sheet
-        </label>
-      </div>
-      <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-        <button type="submit" class="btn primary">Save Settings</button>
-        <button type="button" class="btn ghost" id="btnTestSheet">Test connection</button>
-        <button type="button" class="btn ghost" id="btnPullSheet">Load from Sheet</button>
-        <button type="button" class="btn ghost" id="btnPushSheet">Save to Sheet now</button>
-      </div>
     </form>
-    <p class="muted" style="margin-top:1rem;font-size:0.85rem">Local backup always runs in this browser. Sheet sync needs the Web App deployed with access: <strong>Anyone</strong>.</p>
+    <p class="muted" style="margin-top:1rem;font-size:0.85rem">
+      Status tip: after connecting, use <strong>Load from Sheet</strong> first so the website matches your existing data.
+      Then new edits auto-save back into the same Sheet.
+    </p>
   </div>`;
 }
 
@@ -1170,6 +1184,14 @@ function init() {
   const params = new URLSearchParams(location.search);
   if (params.get('view') && TITLES[params.get('view')]) {
     currentView = params.get('view');
+  }
+  // Allow: ?api=https://script.google.com/macros/s/.../exec
+  const apiFromUrl = params.get('api') || params.get('sheetApi');
+  if (apiFromUrl) {
+    state.settings.sheetApiUrl = apiFromUrl.trim();
+    state.settings.syncEnabled = true;
+    saveState({ skipSheet: true });
+    currentView = 'settings';
   }
 
   function setSidebarOpen(open) {
