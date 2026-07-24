@@ -626,7 +626,8 @@ function renderDashboard(s) {
       <div class="insight"><span>Top Category</span><strong>${s.topCat && s.topCat.used ? `${s.topCat.category} · ${money(s.topCat.used)}` : '—'}</strong></div>
     </div>
   </div>
-  <p class="footer-note">Money is a tool. Every Taka must have a purpose. Spend intentionally. Save consistently.<br/>Built for Biozed Hossain · Version 1.0</p>`;
+  <p class="footer-note">Money is a tool. Every Taka must have a purpose. Spend intentionally. Save consistently.<br/>Built for Biozed Hossain · Version 1.0<br/>
+  <a class="footer-link" href="https://olymahicalender.netlify.app/" target="_blank" rel="noopener noreferrer">Olymahi budget</a></p>`;
 }
 
 function mountDashboardCharts(s) {
