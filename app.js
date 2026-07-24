@@ -534,7 +534,7 @@ function renderIncome() {
       <button type="button" class="btn primary" data-add="income">+ Add Income</button>
     </div>
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Date</th><th>Source</th><th>Description</th><th>Amount</th><th>Payment</th><th>Notes</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Source</th><th>Description</th><th class="num">Amount</th><th>Payment</th><th>Notes</th><th></th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
   </div>`;
@@ -566,7 +566,7 @@ function renderExpense() {
     <div class="table-wrap"><table class="data">
       <thead><tr>
         <th>Date</th><th>Category</th><th>Sub</th><th>Description</th>
-        <th>Budget</th><th>Actual</th><th>Diff</th><th>Status</th><th>Payment</th><th>Notes</th><th></th>
+        <th class="num">Budget</th><th class="num">Actual</th><th class="num">Diff</th><th>Status</th><th>Payment</th><th>Notes</th><th></th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table></div>
@@ -580,12 +580,12 @@ function renderBudget(s) {
       : r.status === 'near' ? '<span class="badge near">🟡 Near Limit</span>'
       : r.status === 'ok' ? '<span class="badge ok">🟢 OK</span>' : '—';
     return `<tr class="${rowClass}">
-      <td>${r.category}</td>
-      <td><input type="number" min="0" step="1" data-budget-cat="${r.category}" value="${r.budget}" style="width:110px;border:1px solid var(--line);border-radius:8px;padding:0.35rem 0.5rem;font:inherit" /></td>
+      <td class="col-cat">${r.category}</td>
+      <td class="num col-budget"><input type="number" min="0" step="1" class="budget-input" data-budget-cat="${r.category}" value="${r.budget}" /></td>
       <td class="num">${money(r.used)}</td>
       <td class="num">${money(r.remaining)}</td>
       <td class="num">${r.budget ? Math.round(r.pct * 100) + '%' : '—'}</td>
-      <td>${badge}</td>
+      <td class="col-status">${badge}</td>
     </tr>`;
   }).join('');
 
@@ -594,12 +594,24 @@ function renderBudget(s) {
       <h3>Category budgets · ${monthLabel()}</h3>
       <button type="button" class="btn primary" id="saveBudgets">Save budgets</button>
     </div>
-    <div class="table-wrap"><table class="data">
-      <thead><tr><th>Category</th><th>Monthly Budget</th><th>Used</th><th>Remaining</th><th>% Used</th><th>Status</th></tr></thead>
+    <div class="table-wrap"><table class="data budget-table">
+      <thead><tr>
+        <th class="col-cat">Category</th>
+        <th class="num col-budget">Monthly Budget</th>
+        <th class="num">Used</th>
+        <th class="num">Remaining</th>
+        <th class="num">% Used</th>
+        <th class="col-status">Status</th>
+      </tr></thead>
       <tbody>${body}
-        <tr><td><strong>TOTAL</strong></td><td class="num"><strong>${money(s.totalBudget)}</strong></td>
-        <td class="num"><strong>${money(s.totalExpense)}</strong></td>
-        <td class="num"><strong>${money(s.budgetRemaining)}</strong></td><td></td><td></td></tr>
+        <tr class="total-row">
+          <td class="col-cat"><strong>TOTAL</strong></td>
+          <td class="num col-budget"><strong>${money(s.totalBudget)}</strong></td>
+          <td class="num"><strong>${money(s.totalExpense)}</strong></td>
+          <td class="num"><strong>${money(s.budgetRemaining)}</strong></td>
+          <td class="num"><strong>${s.totalBudget ? Math.round((s.totalExpense / s.totalBudget) * 100) + '%' : '—'}</strong></td>
+          <td class="col-status"></td>
+        </tr>
       </tbody>
     </table></div>
   </div>`;
@@ -626,7 +638,7 @@ function renderInstallment() {
       <button type="button" class="btn primary" data-add="installment">+ Add Installment</button>
     </div>
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Item / Month</th><th>Amount</th><th>Due Date</th><th>Paid</th><th>Remaining</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Item / Month</th><th class="num">Amount</th><th>Due Date</th><th class="num">Paid</th><th class="num">Remaining</th><th>Status</th><th></th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
   </div>`;
@@ -653,7 +665,7 @@ function renderDebt() {
       <button type="button" class="btn primary" data-add="debt">+ Add Debt</button>
     </div>
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Person</th><th>Amount</th><th>Paid</th><th>Remaining</th><th>Date</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Person</th><th class="num">Amount</th><th class="num">Paid</th><th class="num">Remaining</th><th>Date</th><th>Status</th><th></th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
   </div>`;
@@ -680,7 +692,7 @@ function renderSavings() {
       <button type="button" class="btn primary" data-add="savings">+ Add Entry</button>
     </div>
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Date</th><th>Goal</th><th>Deposit</th><th>Withdraw</th><th>Balance</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Goal</th><th class="num">Deposit</th><th class="num">Withdraw</th><th class="num">Balance</th><th></th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
   </div>`;
@@ -964,16 +976,33 @@ function importData(file) {
 /* ========== INIT ========== */
 
 function init() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('view') && TITLES[params.get('view')]) {
+    currentView = params.get('view');
+  }
+
+  function setSidebarOpen(open) {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    sidebar.classList.toggle('open', open);
+    if (backdrop) backdrop.hidden = !open;
+  }
+
   document.getElementById('nav').addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn');
     if (!btn) return;
     currentView = btn.dataset.view;
-    document.getElementById('sidebar').classList.remove('open');
+    setSidebarOpen(false);
     render();
   });
 
   document.getElementById('menuToggle').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
+    const open = !document.getElementById('sidebar').classList.contains('open');
+    setSidebarOpen(open);
+  });
+
+  document.getElementById('sidebarBackdrop')?.addEventListener('click', () => {
+    setSidebarOpen(false);
   });
 
   document.getElementById('activeMonth').addEventListener('change', (e) => {

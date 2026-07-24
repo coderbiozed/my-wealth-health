@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="app.css?v=6" />
 </head>
 <body>
   <div class="app">
@@ -38,10 +38,12 @@
 
     <main class="main">
       <header class="topbar">
-        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
         <div class="topbar-left">
-          <h2 id="viewTitle">Dashboard</h2>
-          <p id="viewSubtitle" class="muted">Today's cash position</p>
+          <button type="button" class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
+          <div class="topbar-titles">
+            <h2 id="viewTitle">Dashboard</h2>
+            <p id="viewSubtitle" class="muted">Today's cash position</p>
+          </div>
         </div>
         <div class="topbar-right">
           <label class="month-picker">
@@ -60,6 +62,8 @@
     </main>
   </div>
 
+  <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-label="Close menu"></button>
+
   <dialog id="formDialog" class="dialog">
     <form id="entityForm" method="dialog">
       <header class="dialog-head">
@@ -75,6 +79,6 @@
   </dialog>
 
   <div id="toast" class="toast" hidden></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
