@@ -3,7 +3,8 @@
  * Netlify frontend + localStorage + optional Google Sheets sync
  */
 
-const STORAGE_KEY = 'myWealthHealth_v1';
+const STORAGE_KEY = 'myWealthHealth_v2';
+const LEGACY_STORAGE_KEYS = ['myWealthHealth_v1'];
 
 const INCOME_SOURCES = ['Salary', 'Freelance', 'Bonus', 'Gift', 'Refund', 'Other'];
 const PAYMENT_METHODS = ['Cash', 'bKash', 'Nagad', 'Rocket', 'Bank', 'Card', 'Other'];
@@ -75,9 +76,9 @@ function defaultState() {
       fixedCosts: 0,
       emergencyBalance: 1000,
       budgetAlertPct: 20,
-      sheetApiUrl: 'https://script.google.com/macros/s/AKfycbz06wjzgiMi_3ol5aw--q629hR_hazXeWBPJnV6U_tyTpqHPQTZWikkP2dtNlzaxYs9/exec',
+      sheetApiUrl: '',
       syncToken: '',
-      syncEnabled: true
+      syncEnabled: false
     },
     budgets: { ...DEFAULT_BUDGETS },
     income: [],
@@ -90,22 +91,17 @@ function defaultState() {
 
 function loadState() {
   try {
+    LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState();
     const parsed = JSON.parse(raw);
     const base = defaultState();
-    const merged = {
+    return {
       ...base,
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings || {}) },
       budgets: { ...base.budgets, ...(parsed.budgets || {}) }
     };
-    // Prefer configured default Web App if user has none yet
-    if (!(merged.settings.sheetApiUrl || '').trim() && base.settings.sheetApiUrl) {
-      merged.settings.sheetApiUrl = base.settings.sheetApiUrl;
-      merged.settings.syncEnabled = true;
-    }
-    return merged;
   } catch {
     return defaultState();
   }
@@ -925,6 +921,11 @@ function renderSettings() {
       <div class="field"><label>Fixed Monthly Costs</label><input name="fixedCosts" type="number" min="0" value="${st.fixedCosts}" /></div>
       <div class="field"><label>Emergency Balance Alert</label><input name="emergencyBalance" type="number" min="0" value="${st.emergencyBalance}" /></div>
       <div class="field"><label>Budget Alert Threshold %</label><input name="budgetAlertPct" type="number" min="1" max="100" value="${st.budgetAlertPct}" /></div>
+      <div class="field full"><hr style="border:0;border-top:1px solid var(--line);margin:0.4rem 0" /></div>
+      <div class="field full">
+        <button type="button" class="btn danger" id="btnClearData">Clear all saved data</button>
+        <p class="muted" style="margin:0.45rem 0 0;font-size:0.85rem">Removes income, expenses, budgets, and other entries stored on this phone.</p>
+      </div>
     </form>
     <p class="muted" style="margin-top:1rem;font-size:0.85rem">
       Status tip: after connecting, use <strong>Load from Sheet</strong> first so the website matches your existing data.
@@ -1116,6 +1117,18 @@ function bindViewEvents() {
   document.getElementById('btnTestSheet')?.addEventListener('click', () => testSheetConnection());
   document.getElementById('btnPullSheet')?.addEventListener('click', () => pullFromSheet());
   document.getElementById('btnPushSheet')?.addEventListener('click', () => pushToSheet());
+  document.getElementById('btnClearData')?.addEventListener('click', clearAllData);
+}
+
+function clearAllData() {
+  if (!confirm('Delete all saved data on this phone? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+  state = defaultState();
+  saveState({ skipSheet: true });
+  currentView = 'dashboard';
+  toast('All saved data cleared');
+  render();
 }
 
 /* ========== SAMPLE / EXPORT ========== */
